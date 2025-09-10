@@ -1,97 +1,45 @@
-const { WebClient } = require("@slack/web-api");
 const fs = require("fs");
-require("dotenv").config();
+const { sendMessage } = require("./services/slackMessages");
+const { sendFile } = require("./services/slackFiles");
+const { sendBuffersAsPost } = require("./services/slackPosts");
+const { getUserToken } = require("./services/slackAuth");
 
-const token = process.env.SLACK_BOT_TOKEN;
-const channelID = process.env.SLACK_CHANNEL_ID; // ID канала, например
-
-const web = new WebClient(token);
-
-// === Отправка простого сообщения ===
-async function sendMessage(text) {
+// Пример использования
+(async () => {
   try {
-    await web.chat.postMessage({ channel: channelID, text });
-    console.log(`✅ Сообщение отправлено: "${text}"`);
+    // await sendMessage("Hello Slack Bot! 🚀");
+
+    // await sendFile("./assets/1.jpg", "🚀🚀");
+    const buffers = [
+      { buffer: fs.createReadStream("./assets/1.jpg") },
+      { buffer: fs.createReadStream("./assets/2.jpg") },
+      { buffer: fs.createReadStream("./assets/3.jpg") },
+      { buffer: fs.createReadStream("./assets/4.jpg") },
+      { buffer: fs.createReadStream("./assets/5.jpg") },
+      { buffer: fs.createReadStream("./assets/6.jpg") },
+      { buffer: fs.createReadStream("./assets/7.jpg") },
+      { buffer: fs.createReadStream("./assets/8.jpg") },
+      { buffer: fs.createReadStream("./assets/9.jpg") },
+      { buffer: fs.createReadStream("./assets/10.jpg") },
+    ];
+    const postData = {
+      title:
+        "📰 Зеленський підтримує Трампа щодо енергетичних санкцій проти Росії",
+      uaLink:
+        "https://mezha.net/ua/bukvy/zelensky-supports-trump-s-energy-sanctions-on-russia-amid-global-tensions/",
+      enLink:
+        "https://mezha.net/eng/bukvy/zelensky-supports-trump-s-energy-sanctions-on-russia-amid-global-tensions/",
+      bannerUrl:
+        "https://mezha.net/wp-content/uploads/2025/09/09/the-president-of-ukraine.webp",
+      shortDescription:
+        "Президент України Зеленський підтримав позицію Трампа щодо розірвання енергетичних угод з Росією та закликав до повної відмови від російських енергоносіїв для посилення тиску на Путіна.",
+      callToAction: "📌 Оберіть зображення в реплаях нижче 👇",
+    };
+    await sendBuffersAsPost(postData, buffers);
+
+    const userToken = await getUserToken();
+    console.log("🎫 User token:", userToken);
   } catch (err) {
-    console.error("Ошибка отправки сообщения:", err.data || err);
+    console.error("Error в index.js:", err);
   }
-}
-
-// === Отправка файла с комментарием ===
-async function sendFile(filePath, comment = "") {
-  try {
-    if (!fs.existsSync(filePath)) {
-      console.error("Файл не найден:", filePath);
-      return;
-    }
-
-    const filename = filePath.split("/").pop();
-
-    const resp = await web.files.uploadV2({
-      file: fs.createReadStream(filePath),
-      filename,
-      initial_comment: comment,
-      channel_id: channelID,
-    });
-
-    if (resp.ok) {
-      console.log(`✅ Файл отправлен: ${filename} (коммент: "${comment}")`);
-    } else {
-      console.error("Ошибка отправки файла:", resp.error);
-    }
-  } catch (err) {
-    console.error("Ошибка отправки файла:", err.data || err);
-  }
-}
-
-// === Отправка нескольких файлов в нескольких сообщениях ===
-async function sendMultipleFiles(filePaths, mainComment = "Файлы:") {
-  // Создаём первый пост с комментарием
-  const thread_ts = await sendMessage(mainComment);
-
-  for (const filePath of filePaths) {
-    // Отправляем каждый файл в один тред
-    await sendFile(filePath, thread_ts);
-  }
-}
-
-// === Отправка нескольких файлов в одном сообщении ===
-async function sendImagesAsPost(urls, text = "Вот несколько фото:") {
-  try {
-    const blocks = [{ type: "section", text: { type: "mrkdwn", text } }];
-
-    for (const url of urls) {
-      blocks.push({ type: "image", image_url: url, alt_text: "Фото" });
-    }
-
-    await web.chat.postMessage({ channel: channelID, blocks });
-    console.log("✅ Пост с несколькими фото отправлен");
-  } catch (err) {
-    console.error("Ошибка отправки поста с фото:", err.data || err);
-  }
-}
-
-// === Примеры использования ===
-// (async () => {
-//   // Просто текст
-//   await sendMessage("Привет! Это простое сообщение 🚀");
-
-//   // Текст + фото
-//   await sendFile("./test.png", "Сообщение вместе с фото");
-
-//   // Только фото
-//   await sendFile("./test.png");
-
-//   // Несколько фото
-//   const photos = ["./test.png", "./test2.png", "./test3.png"];
-//   await sendMultipleFiles(photos, "Отправка нескольких фото");
-// })();
-
-// (async () => {
-//   const urls = [
-//     "https://mezha.net/wp-content/uploads/2025/09/08/notice-of-suspicion-for.webp",
-//     "https://mezha.net/wp-content/uploads/2025/09/08/police-in-the-czech.webp",
-//     "https://mezha.net/wp-content/uploads/2025/09/08/president-trump-is-expected.webp",
-//   ];
-//   await sendImagesAsPost(urls, "Несколько фото в одном сообщении!!!!");
-// })();
+})();
